@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki情報取得デモ（Google）</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 0 20px; color: #333; }
+        h1 { color: #4285F4; border-bottom: 2px solid #4285F4; padding-bottom: 10px; }
+        .loading { color: #666; font-style: italic; }
+        .content { line-height: 1.8; font-size: 1.1rem; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .error { color: #EA4335; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Wikipediaから取得した「Google」の情報</h1>
+    
+    <!-- 情報を表示するエリア -->
+    <div id="wiki-data">
+        <p class="loading">Wikipediaからデータを読み込んでいます...</p>
+    </div>
+
+    <script>
+        // Wikipediaの「Google」ページから「冒頭の概要文」をテキスト形式で取得するURL
+        // 「&origin=*」をつけることで、バックエンドなし（CORS制限回避）で取得可能
+        const pageTitle = "Google";
+        const apiUrl = `https://wikipedia.org{encodeURIComponent(pageTitle)}&origin=*`;
+
+        // ブラウザのJavaScriptから直接Wiki APIにアクセス
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("ネットワークエラーが発生しました。");
+                }
+                return response.json();
+            })
+            .then(data => {
+                const pages = data.query.pages;
+                // 返ってきたデータから記事本文（extract）を抜き出す
+                const pageId = Object.keys(pages)[0];
+                const text = pages[pageId].extract;
+
+                // 画面に表示する
+                const displayArea = document.getElementById("wiki-data");
+                if (text) {
+                    displayArea.innerHTML = `<div class="content">${text.replace(/\n/g, '<br><br>')}</div>`;
+                } else {
+                    displayArea.innerHTML = `<p class="error">記事が見つかりませんでした。</p>`;
+                }
+            })
+            .catch(error => {
+                console.error("エラー:", error);
+                document.getElementById("wiki-data").innerHTML = `<p class="error">データの取得に失敗しました: ${error.message}</p>`;
+            });
+    </script>
+</body>
+</html>
