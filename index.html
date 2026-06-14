@@ -16,43 +16,55 @@
 
     <h1>Wikipediaから取得した「Google」の情報</h1>
     
-    <!-- 情報を表示するエリア -->
     <div id="wiki-data">
         <p class="loading">Wikipediaからデータを読み込んでいます...</p>
     </div>
 
     <script>
-        // Wikipediaの「Google」ページから「冒頭の概要文」をテキスト形式で取得するURL
-        // 「&origin=*」をつけることで、バックエンドなし（CORS制限回避）で取得可能
         const pageTitle = "Google";
+        
+        // パラメータを安全に結合
         const apiUrl = `https://wikipedia.org{encodeURIComponent(pageTitle)}&origin=*`;
 
-        // ブラウザのJavaScriptから直接Wiki APIにアクセス
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("ネットワークエラーが発生しました。");
-                }
-                return response.json();
-            })
-            .then(data => {
-                const pages = data.query.pages;
-                // 返ってきたデータから記事本文（extract）を抜き出す
-                const pageId = Object.keys(pages)[0];
-                const text = pages[pageId].extract;
+        // GitHub Pagesからの通信を成功させるために、ヘッダーにUser-Agentを付与します
+        fetch(apiUrl, {
+            method: "GET",
+            headers: {
+                "Api-User-Agent": "MyGitHubPagesDemo/1.0 (https://github.io; contact@example.com)"
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTPエラー! ステータス: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const pages = data.query.pages;
+            const pageId = Object.keys(pages)[0];
+            
+            // 該当するページIDが -1 の場合は記事が存在しない
+            if (pageId === "-1") {
+                document.getElementById("wiki-data").innerHTML = `<p class="error">記事が見つかりませんでした。</p>`;
+                return;
+            }
 
-                // 画面に表示する
-                const displayArea = document.getElementById("wiki-data");
-                if (text) {
-                    displayArea.innerHTML = `<div class="content">${text.replace(/\n/g, '<br><br>')}</div>`;
-                } else {
-                    displayArea.innerHTML = `<p class="error">記事が見つかりませんでした。</p>`;
-                }
-            })
-            .catch(error => {
-                console.error("エラー:", error);
-                document.getElementById("wiki-data").innerHTML = `<p class="error">データの取得に失敗しました: ${error.message}</p>`;
-            });
+            const text = pages[pageId].extract;
+            const displayArea = document.getElementById("wiki-data");
+            
+            if (text) {
+                displayArea.innerHTML = `<div class="content">${text.replace(/\n/g, '<br><br>')}</div>`;
+            } else {
+                displayArea.innerHTML = `<p class="error">記事の本文が空です。</p>`;
+            }
+        })
+        .catch(error => {
+            console.error("Fetchエラー詳細:", error);
+            document.getElementById("wiki-data").innerHTML = `
+                <p class="error">データの取得に失敗しました: ${error.message}</p>
+                <p style="color:#666; font-size:0.9rem;">※ブラウザのF12キーを押し、「コンソール(Console)」タブのエラーログを確認すると原因がより詳しく分かります。</p>
+            `;
+        });
     </script>
 </body>
 </html>
